@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -40,8 +42,9 @@ public class User {
     @Column(name = "last_name", nullable = false)
     private String lastName;
 
-    @Column(name = "couple_id")
-    private Integer coupleId;
+    @ManyToOne
+    @JoinColumn(name = "couple_id")
+    private Couple couple;
 
     @Column(name = "is_active")
     private Boolean isActive = true;
@@ -51,6 +54,9 @@ public class User {
 
     @Column(name = "updated_at", columnDefinition = "TIMESTAMP")
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    private boolean linked = false;
 
     @PrePersist
     protected void onCreate() {

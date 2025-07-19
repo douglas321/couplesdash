@@ -1,16 +1,16 @@
 package com.csperry.couplesdash.service;
 
-
 import com.csperry.couplesdash.model.AuthRequest;
 import com.csperry.couplesdash.model.AuthResponse;
+import com.csperry.couplesdash.model.Couple;
 import com.csperry.couplesdash.model.User;
+import com.csperry.couplesdash.repository.CoupleRepository;
 import com.csperry.couplesdash.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -23,21 +23,21 @@ public class AuthService {
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
+    private final CoupleRepository coupleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
     private AuthenticationManager authManager;
 
     @Autowired
-    private UserRepository userRepo;
-
-    @Autowired
     private JwtService jwtService;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    public AuthService(UserRepository userRepository) {
+    public AuthService(UserRepository userRepository,
+                       CoupleRepository coupleRepository,
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.coupleRepository = coupleRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public User createUser(User user) {
@@ -45,9 +45,18 @@ public class AuthService {
             logger.info("Email already in use: {}", user.getEmail());
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
+
         logger.info("Creating new user with email: {}", user.getEmail());
+
+        // Hash the password
         String hashedPassword = passwordEncoder.encode(user.getPassword());
         user.setPassword(hashedPassword);
+
+        // Create and assign a new couple
+        Couple couple = new Couple();
+        coupleRepository.save(couple);
+        user.setCouple(couple);
+
         return userRepository.save(user);
     }
 
@@ -63,7 +72,7 @@ public class AuthService {
         }
 
         logger.info("Authentication successful");
-        User user = userRepo.findByEmail(request.getEmail()).orElseThrow();
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
         String token = jwtService.generateToken(user);
         return new AuthResponse(token);
     }
